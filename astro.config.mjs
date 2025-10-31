@@ -4,8 +4,8 @@ import tailwind from '@astrojs/tailwind';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-  site: 'https://username.github.io',
-  base: '/blog',
+  site: 'https://YOUR_USERNAME.github.io',
+  base: '/',
   integrations: [mdx(), tailwind(), sitemap()],
   markdown: {
     shikiConfig: {
