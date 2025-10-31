@@ -1,0 +1,92 @@
+---
+// 导入全局样式
+import '../styles/global.css';
+
+export interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+}
+
+const { title, description = '', image = '' } = Astro.props;
+
+// 获取基础路径 - 使用 Astro 配置中的 base
+const basePath = Astro.config?.base || '/';
+
+// 安全处理 canonical URL
+const site = Astro.site || new URL('https://example.com');
+const pathname = Astro.url.pathname.replace(basePath, '/') || '/';
+const canonicalURL = new URL(pathname, site);
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content={description} />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={image} />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={canonicalURL} />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
+    <meta property="twitter:image" content={image} />
+
+    <!-- RSS -->
+    <link rel="alternate" type="application/rss+xml" title="RSS" href={`${basePath}rss.xml`} />
+
+    <title>{title}</title>
+  </head>
+  <body>
+    <!-- 顶部导航 -->
+    <header class="bg-white border-b border-border sticky top-0 z-50">
+      <nav class="max-w-a4 mx-auto px-6 py-4">
+        <div class="flex justify-between items-center">
+          <a href={`${basePath}`} class="text-xl font-bold text-fg hover:text-primary transition-colors">
+            我的博客
+          </a>
+          <div class="flex items-center space-x-6">
+            <a href={`${basePath}blog`} class="text-fg hover:text-primary transition-colors">文章</a>
+            <a href={`${basePath}tags`} class="text-fg hover:text-primary transition-colors">标签</a>
+            <a href={`${basePath}archive`} class="text-fg hover:text-primary transition-colors">归档</a>
+            <a href={`${basePath}about`} class="text-fg hover:text-primary transition-colors">关于</a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- A4 纸效果内容区域 -->
+    <main class="bg-bg min-h-screen py-12">
+      <div class="max-w-a4 mx-auto px-6">
+        <div class="bg-white shadow-xl rounded-lg p-12 min-h-screen">
+          <slot />
+        </div>
+      </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white border-t border-border py-8">
+      <div class="max-w-a4 mx-auto px-6 text-center text-muted text-sm">
+        <p>&copy; 2025 我的博客. All rights reserved.</p>
+        <p class="mt-2">
+          Powered by
+          <a href="https://astro.build" class="text-link hover:underline" target="_blank" rel="noopener noreferrer">Astro</a> &
+          <a href="https://tailwindcss.com" class="text-link hover:underline" target="_blank" rel="noopener noreferrer">Tailwind CSS</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

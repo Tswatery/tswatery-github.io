@@ -1,0 +1,116 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import type { CollectionEntry } from 'astro:content';
+
+export interface Props {
+  post: CollectionEntry<'blog'>;
+  prev?: CollectionEntry<'blog'>;
+  next?: CollectionEntry<'blog'>;
+}
+
+const { post, prev, next } = Astro.props;
+
+// 获取基础路径
+const basePath = Astro.config?.base || '/';
+
+const { Content } = await post.render();
+
+const formattedDate = post.data.date.toLocaleDateString('zh-CN', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+
+const tags = post.data.tags.map(tag => ({
+  name: tag,
+  href: `${basePath}tags/${tag}/`,
+}));
+
+// MathJax 配置
+const mathjaxConfig = {
+  options: {
+    enableMenu: false,
+  },
+  chtml: {
+    scale: 1,
+  },
+  tex: {
+    tags: 'all',
+    packages: { '[+]': ['noerrors', 'noundefined'] },
+    macros: {
+      E: '{\\mathbb{E}}',
+      Var: '{\\mathrm{Var}}',
+      argmin: '\\mathop{\\mathrm{argmin}}',
+      argmax: '\\mathop{\\mathrm{argmax}}',
+      ind: ['{\\mathbf{1}_{ #1 }}', 1],
+    },
+  },
+};
+---
+
+<BaseLayout
+  title={post.data.title}
+  description={post.data.summary}
+>
+  <article class="prose max-w-none">
+    <!-- 文章头部 -->
+    <header class="mb-8 pb-8 border-b border-border">
+      <h1 class="text-4xl font-bold mb-4">{post.data.title}</h1>
+      <div class="flex items-center gap-4 text-muted text-sm">
+        <time datetime={post.data.date.toISOString()}>{formattedDate}</time>
+        {post.data.updated && (
+          <span>
+            (更新于 {post.data.updated.toLocaleDateString('zh-CN')})
+          </span>
+        )}
+        {tags.length > 0 && (
+          <div class="flex gap-2">
+            {tags.map(tag => (
+              <a
+                href={tag.href}
+                class="text-link hover:underline"
+              >
+                #{tag.name}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    </header>
+
+    <!-- 文章内容 -->
+    <div class="prose-content">
+      <Content />
+    </div>
+
+    <!-- 文章底部导航 -->
+    <nav class="mt-12 pt-8 border-t border-border">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {prev && (
+          <a
+            href={`${basePath}blog/${prev.slug}/`}
+            class="flex flex-col p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
+          >
+            <span class="text-sm text-muted mb-1">← 上一篇</span>
+            <span class="font-medium">{prev.data.title}</span>
+          </a>
+        )}
+        {next && (
+          <a
+            href={`${basePath}blog/${next.slug}/`}
+            class={`flex flex-col p-4 border border-border rounded-lg hover:shadow-md transition-shadow ${prev ? 'md:text-right' : 'md:col-start-2'}`}
+          >
+            <span class="text-sm text-muted mb-1">下一篇 →</span>
+            <span class="font-medium">{next.data.title}</span>
+          </a>
+        )}
+      </div>
+    </nav>
+  </article>
+
+  <!-- MathJax 配置脚本 -->
+  <script>
+    window.MathJax = JSON.parse(JSON.stringify({mathjaxConfig}));
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</BaseLayout>

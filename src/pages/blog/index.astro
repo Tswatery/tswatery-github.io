@@ -1,0 +1,96 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+// 获取基础路径
+const basePath = Astro.config?.base || '/';
+
+// 获取所有非草稿文章
+const posts = await getCollection('blog', ({ data }) => !data.draft);
+const sortedPosts = posts.sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+);
+
+// 获取所有标签
+const allTags = new Set<string>();
+posts.forEach(post => {
+  post.data.tags.forEach(tag => allTags.add(tag));
+});
+
+// 格式化日期
+function formatDate(date: Date) {
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+---
+
+<Layout
+  title="所有文章"
+  description="博客文章列表"
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">所有文章</h1>
+    <p class="text-muted">
+      共 {sortedPosts.length} 篇文章
+      {allTags.size > 0 && `，${allTags.size} 个标签`}
+    </p>
+  </header>
+
+  {/* 文章列表 */}
+  <div class="space-y-8">
+    {sortedPosts.map((post) => (
+      <article class="border-b border-border pb-8 last:border-b-0">
+        <header>
+          <h2 class="text-2xl font-semibold mb-3">
+            <a
+              href={`${basePath}blog/${post.slug}/`}
+              class="text-fg hover:text-primary transition-colors"
+            >
+              {post.data.title}
+            </a>
+          </h2>
+          <div class="flex items-center gap-4 text-sm text-muted mb-3">
+            <time datetime={post.data.date.toISOString()}>
+              {formatDate(post.data.date)}
+            </time>
+            {post.data.updated && (
+              <span>(更新于 {formatDate(post.data.updated)})</span>
+            )}
+          </div>
+          <p class="text-muted text-base leading-relaxed mb-4">
+            {post.data.summary}
+          </p>
+          {post.data.tags.length > 0 && (
+            <div class="flex gap-2 flex-wrap">
+              {post.data.tags.map(tag => (
+                <a
+                  href={`${basePath}tags/${tag}/`}
+                  class="text-xs bg-code-bg text-code-fg px-2.5 py-1 rounded hover:bg-primary hover:text-white transition-colors"
+                >
+                  #{tag}
+                </a>
+              ))}
+            </div>
+          )}
+        </header>
+      </article>
+    ))}
+  </div>
+
+  {/* 返回顶部 */}
+  <div class="mt-12 pt-8 border-t border-border text-center">
+    <a
+      href="#"
+      class="inline-flex items-center gap-2 text-link hover:underline"
+      onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); return false;"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+      返回顶部
+    </a>
+  </div>
+</Layout>

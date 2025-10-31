@@ -1,0 +1,30 @@
+:root {
+  /* Light theme */
+  --bg: #f9fafb;
+  --fg: #1f2937;
+  --muted: #6b7280;
+  --primary: #3b82f6;
+  --link: #2563eb;
+  --border: #e5e7eb;
+  --code-bg: #f3f4f6;
+  --code-fg: #1f2937;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro SC', 'Noto Sans SC', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--fg);
+  background-color: var(--bg);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

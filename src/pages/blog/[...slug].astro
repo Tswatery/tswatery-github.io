@@ -1,0 +1,34 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: post,
+  }));
+};
+
+type Props = CollectionEntry<'blog'>;
+
+const post = Astro.props;
+const allPosts = await getCollection('blog', ({ data }) => !data.draft);
+const sortedPosts = allPosts.sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+);
+
+// 找到当前文章的索引
+const currentIndex = sortedPosts.findIndex((p) => p.slug === post.slug);
+
+// 获取上一篇和下一篇文章
+const prev = currentIndex < sortedPosts.length - 1 ? sortedPosts[currentIndex + 1] : undefined;
+const next = currentIndex > 0 ? sortedPosts[currentIndex - 1] : undefined;
+---
+
+<BlogLayout
+  post={post}
+  prev={prev}
+  next={next}
+/>

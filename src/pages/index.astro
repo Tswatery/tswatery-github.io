@@ -1,0 +1,114 @@
+---
+import Layout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+// 获取基础路径
+const basePath = import.meta.env.BASE_URL || '/';
+
+// 获取最新的 6 篇文章
+const posts = await getCollection('blog', ({ data }) => !data.draft);
+const latestPosts = posts
+  .sort((a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime())
+  .slice(0, 6);
+
+// 格式化日期
+function formatDate(date: Date) {
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+---
+
+<Layout
+  title="首页"
+  description="轻量级个人博客"
+>
+  <!-- 欢迎区域 -->
+  <section class="mb-12">
+    <h1 class="text-4xl font-bold mb-4">欢迎来到我的博客</h1>
+    <p class="text-xl text-muted">
+      这里记录着我的技术思考、学习笔记和生活感悟。
+    </p>
+  </section>
+
+  <!-- 最新文章 -->
+  <section class="mb-8">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-semibold">最新文章</h2>
+      <a
+        href={`${basePath}blog`}
+        class="text-link hover:underline flex items-center gap-1"
+      >
+        查看全部
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+
+    <div class="space-y-6">
+      {latestPosts.map((post) => (
+        <article class="group">
+          <header class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <h3 class="text-xl font-semibold mb-2">
+                <a
+                  href={`${basePath}blog/${post.slug}/`}
+                  class="text-fg group-hover:text-primary transition-colors"
+                >
+                  {post.data.title}
+                </a>
+              </h3>
+              <p class="text-muted mb-2 line-clamp-2">
+                {post.data.summary}
+              </p>
+              <div class="flex items-center gap-4 text-sm text-muted">
+                <time datetime={post.data.date.toISOString()}>
+                  {formatDate(post.data.date)}
+                </time>
+                {post.data.tags.length > 0 && (
+                  <div class="flex gap-2">
+                    {post.data.tags.slice(0, 3).map(tag => (
+                      <span class="text-xs bg-code-bg text-code-fg px-2 py-1 rounded">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </header>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  {/* 其他链接 */}
+  <section class="pt-8 border-t border-border">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <a
+        href={`${basePath}tags`}
+        class="p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
+      >
+        <h3 class="font-semibold mb-2">📂 标签</h3>
+        <p class="text-sm text-muted">按标签浏览文章</p>
+      </a>
+      <a
+        href={`${basePath}archive`}
+        class="p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
+      >
+        <h3 class="font-semibold mb-2">📅 归档</h3>
+        <p class="text-sm text-muted">按时间浏览文章</p>
+      </a>
+      <a
+        href={`${basePath}about`}
+        class="p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
+      >
+        <h3 class="font-semibold mb-2">👤 关于</h3>
+        <p class="text-sm text-muted">了解更多</p>
+      </a>
+    </div>
+  </section>
+</Layout>

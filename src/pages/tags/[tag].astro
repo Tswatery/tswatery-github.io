@@ -1,0 +1,117 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import type { GetStaticPaths } from 'astro';
+
+export const getStaticPaths: GetStaticPaths = async () => {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  const tagSet = new Set<string>();
+
+  posts.forEach(post => {
+    post.data.tags.forEach(tag => tagSet.add(tag));
+  });
+
+  return Array.from(tagSet).map(tag => ({
+    params: { tag },
+    props: { posts, tag },
+  }));
+};
+
+type Props = {
+  posts: any[];
+  tag: string;
+};
+
+const { posts: allPosts, tag } = Astro.props;
+
+// 筛选包含该标签的文章
+const filteredPosts = allPosts.filter(post =>
+  post.data.tags.includes(tag)
+).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+);
+
+// 格式化日期
+function formatDate(date: Date) {
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+---
+
+<Layout
+  title={`标签: ${tag}`}
+  description={`包含标签 ${tag} 的所有文章`}
+>
+  <header class="mb-8">
+    <nav class="text-sm text-muted mb-4">
+      <a href="/" class="hover:text-link">首页</a>
+      <span class="mx-2">/</span>
+      <a href="/tags" class="hover:text-link">标签</a>
+      <span class="mx-2">/</span>
+      <span class="text-fg">{tag}</span>
+    </nav>
+    <h1 class="text-3xl font-bold mb-4">标签: #{tag}</h1>
+    <p class="text-muted">
+      共 {filteredPosts.length} 篇文章
+    </p>
+  </header>
+
+  {/* 文章列表 */}
+  <div class="space-y-6">
+    {filteredPosts.map((post) => (
+      <article class="border-b border-border pb-6 last:border-b-0">
+        <header>
+          <h2 class="text-xl font-semibold mb-3">
+            <a
+              href={`/blog/${post.slug}/`}
+              class="text-fg hover:text-primary transition-colors"
+            >
+              {post.data.title}
+            </a>
+          </h2>
+          <div class="flex items-center gap-4 text-sm text-muted mb-3">
+            <time datetime={post.data.date.toISOString()}>
+              {formatDate(post.data.date)}
+            </time>
+            {post.data.updated && (
+              <span>(更新于 {formatDate(post.data.updated)})</span>
+            )}
+          </div>
+          <p class="text-muted mb-3">
+            {post.data.summary}
+          </p>
+          {post.data.tags.length > 1 && (
+            <div class="flex gap-2 flex-wrap">
+              {post.data.tags
+                .filter(t => t !== tag)
+                .map(t => (
+                  <a
+                    href={`/tags/${t}/`}
+                    class="text-xs bg-code-bg text-code-fg px-2.5 py-1 rounded hover:bg-primary hover:text-white transition-colors"
+                  >
+                    #{t}
+                  </a>
+                ))}
+            </div>
+          )}
+        </header>
+      </article>
+    ))}
+  </div>
+
+  {/* 返回标签页 */}
+  <div class="mt-12 pt-8 border-t border-border">
+    <a
+      href="/tags"
+      class="inline-flex items-center gap-2 text-link hover:underline"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      返回标签列表
+    </a>
+  </div>
+</Layout>

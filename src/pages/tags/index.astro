@@ -1,0 +1,65 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+// 获取所有文章和标签
+const posts = await getCollection('blog', ({ data }) => !data.draft);
+
+// 统计每个标签的文章数
+const tagCounts = new Map<string, number>();
+posts.forEach(post => {
+  post.data.tags.forEach(tag => {
+    tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
+  });
+});
+
+// 按文章数量排序标签
+const sortedTags = Array.from(tagCounts.entries()).sort(
+  (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+);
+---
+
+<Layout
+  title="标签"
+  description="所有文章标签"
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">标签</h1>
+    <p class="text-muted">
+      共 {sortedTags.length} 个标签，{posts.length} 篇文章
+    </p>
+  </header>
+
+  {/* 标签云 */}
+  <div class="flex flex-wrap gap-3 mb-12">
+    {sortedTags.map(([tag, count]) => (
+      <a
+        href={`/tags/${tag}/`}
+        class="group relative inline-flex items-center gap-2 px-4 py-2 bg-code-bg text-code-fg rounded-lg hover:bg-primary hover:text-white transition-all duration-200"
+      >
+        <span class="font-medium">#{tag}</span>
+        <span class="text-sm opacity-75 group-hover:opacity-100">
+          {count}
+        </span>
+      </a>
+    ))}
+  </div>
+
+  {/* 按字数分组显示 */}
+  <section>
+    <h2 class="text-xl font-semibold mb-4">标签列表</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {sortedTags.map(([tag, count]) => (
+        <a
+          href={`/tags/${tag}/`}
+          class="flex items-center justify-between p-4 border border-border rounded-lg hover:shadow-md hover:border-primary transition-all duration-200"
+        >
+          <span class="font-medium">#{tag}</span>
+          <span class="text-sm text-muted bg-code-bg px-2 py-1 rounded">
+            {count} 篇
+          </span>
+        </a>
+      ))}
+    </div>
+  </section>
+</Layout>

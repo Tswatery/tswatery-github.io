@@ -1,0 +1,145 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+// 获取所有文章
+const posts = await getCollection('blog', ({ data }) => !data.draft);
+const sortedPosts = posts.sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+);
+
+// 按年份分组
+const postsByYear = new Map<number, typeof posts>();
+sortedPosts.forEach(post => {
+  const year = post.data.date.getFullYear();
+  if (!postsByYear.has(year)) {
+    postsByYear.set(year, []);
+  }
+  postsByYear.get(year)!.push(post);
+});
+
+// 按月份分组
+const postsByMonth = new Map<string, typeof posts>();
+sortedPosts.forEach(post => {
+  const year = post.data.date.getFullYear();
+  const month = post.data.date.getMonth();
+  const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+  if (!postsByMonth.has(key)) {
+    postsByMonth.set(key, []);
+  }
+  postsByMonth.get(key)!.push(post);
+});
+
+// 格式化日期
+function formatDate(date: Date) {
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+// 获取月份名称
+function getMonthName(year: number, month: number) {
+  const date = new Date(year, month, 1);
+  return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long' });
+}
+---
+
+<Layout
+  title="归档"
+  description="所有文章归档"
+>
+  <header class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">归档</h1>
+    <p class="text-muted">
+      共 {sortedPosts.length} 篇文章，
+      跨越 {postsByYear.size} 年
+    </p>
+  </header>
+
+  {/* 年份概览 */}
+  <section class="mb-12">
+    <h2 class="text-xl font-semibold mb-4">按年份</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {Array.from(postsByYear.entries())
+        .sort((a, b) => b[0] - a[0])
+        .map(([year, posts]) => (
+          <a
+            href={`#${year}`}
+            class="p-4 border border-border rounded-lg hover:shadow-md hover:border-primary transition-all duration-200 text-center"
+          >
+            <div class="text-2xl font-bold text-primary mb-1">{year}</div>
+            <div class="text-sm text-muted">{posts.length} 篇</div>
+          </a>
+        ))}
+    </div>
+  </section>
+
+  {/* 按年月详细列表 */}
+  <section>
+    <h2 class="text-xl font-semibold mb-6">时间线</h2>
+    <div class="space-y-12">
+      {Array.from(postsByMonth.entries())
+        .sort((a, b) => b[0].localeCompare(a[0]))
+        .map(([monthKey, posts]) => {
+          const [year, month] = monthKey.split('-').map(Number);
+          return (
+            <div id={String(year)}>
+              <h3 class="text-lg font-semibold mb-4 text-primary">
+                {getMonthName(year, month)}
+              </h3>
+              <div class="space-y-4">
+                {posts.map((post) => (
+                  <article class="flex items-start gap-4 group">
+                    <time class="text-sm text-muted whitespace-nowrap mt-1">
+                      {post.data.date.getDate()}日
+                    </time>
+                    <div class="flex-1 pb-4 border-b border-border">
+                      <h4 class="text-base font-medium mb-1">
+                        <a
+                          href={`/blog/${post.slug}/`}
+                          class="text-fg group-hover:text-primary transition-colors"
+                        >
+                          {post.data.title}
+                        </a>
+                      </h4>
+                      <p class="text-sm text-muted line-clamp-2">
+                        {post.data.summary}
+                      </p>
+                      {post.data.tags.length > 0 && (
+                        <div class="flex gap-2 mt-2">
+                          {post.data.tags.slice(0, 3).map(tag => (
+                            <a
+                              href={`/tags/${tag}/`}
+                              class="text-xs bg-code-bg text-code-fg px-2 py-1 rounded hover:bg-primary hover:text-white transition-colors"
+                            >
+                              #{tag}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+    </div>
+  </section>
+
+  {/* 返回顶部 */}
+  <div class="mt-12 pt-8 border-t border-border text-center">
+    <a
+      href="#"
+      class="inline-flex items-center gap-2 text-link hover:underline"
+      onclick="window.scrollTo({ top: 0, behavior: 'smooth' }); return false;"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+      返回顶部
+    </a>
+  </div>
+</Layout>
