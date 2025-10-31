@@ -3,7 +3,7 @@
 ## 部署状态
 
 ✅ **已完成**：
-- 代码已推送到 GitHub：https://github.com/Tswatery/blog
+- 代码已推送到 GitHub：https://github.com/Tswatery/tswatery-github.io
 - GitHub Actions 工作流已配置
 - 配置文件已更新为您的用户名
 
@@ -27,7 +27,7 @@ git push origin main
 #### 在 GitHub 上操作：
 
 1. **访问您的仓库**
-   - 打开：https://github.com/Tswatery/blog
+   - 打开：https://github.com/Tswatery/tswatery-github.io
 
 2. **进入 Settings**
    - 点击顶部的 "Settings" 标签
@@ -48,12 +48,12 @@ git push origin main
 
 **主要地址**：
 ```
-https://Tswatery.github.io/blog
+https://tswatery.github.io
 ```
 
 **其他可用地址**：
-- https://Tswatery.github.io/blog/
-- https://Tswatery.github.io/blog/index.html
+- https://tswatery.github.io/
+- https://tswatery.github.io/index.html
 
 ## 项目结构说明
 

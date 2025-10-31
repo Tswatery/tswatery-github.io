@@ -25,9 +25,6 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build
-        env:
-          SITE: https://tswatery.github.io
-          BASE: /
         run: |
           npx astro build
       - uses: actions/upload-pages-artifact@v3
