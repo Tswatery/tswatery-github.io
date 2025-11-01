@@ -25,12 +25,13 @@ try {
   const files = await fs.readdir(diaryDir);
 
   for (const file of files) {
-    if (file.endsWith('.md')) {
+    // 支持所有 Markdown 文件
+    if (file.endsWith('.md') || file.endsWith('.markdown')) {
       const filePath = path.join(diaryDir, file);
       const content = await fs.readFile(filePath, 'utf-8');
 
-      // 解析 Front Matter
-      let title = '无标题';
+      // 默认值
+      let title = path.basename(file, path.extname(file));
       let customDate = '';
       let mood = '😊';
       let rating = 3;
@@ -46,7 +47,7 @@ try {
           const frontMatter = content.slice(3, endIndex).trim();
           markdownContent = content.slice(endIndex + 3).trim();
 
-          // 解析 Front Matter
+          // 解析 Front Matter（可选）
           const titleMatch = frontMatter.match(/title:\s*(.+)/);
           if (titleMatch) title = titleMatch[1].trim().replace(/['"]/g, '');
 
@@ -77,7 +78,6 @@ try {
 
       // 获取文件修改时间
       const stats = await fs.stat(filePath);
-      let fileDate: string;
       let displayDate: string;
 
       if (hasCustomDate && customDate) {
@@ -85,7 +85,7 @@ try {
         displayDate = customDate;
       } else {
         // 否则使用文件修改时间
-        fileDate = stats.mtime.toLocaleString('zh-CN', {
+        displayDate = stats.mtime.toLocaleString('zh-CN', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
@@ -93,7 +93,6 @@ try {
           minute: '2-digit',
           second: '2-digit',
         });
-        displayDate = fileDate;
       }
 
       entries.push({

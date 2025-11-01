@@ -160,30 +160,9 @@ declare module 'astro:content' {
   render(): Render[".md"];
 }>;
 "diary": {
-"2025-10-31-01.md": {
-	id: "2025-10-31-01.md";
-  slug: "2025-10-31-01";
-  body: string;
-  collection: "diary";
-  data: any
-} & { render(): Render[".md"] };
-"2025-11-01-01.md": {
-	id: "2025-11-01-01.md";
-  slug: "2025-11-01-01";
-  body: string;
-  collection: "diary";
-  data: any
-} & { render(): Render[".md"] };
-"2025-11-01-02.md": {
-	id: "2025-11-01-02.md";
-  slug: "2025-11-01-02";
-  body: string;
-  collection: "diary";
-  data: any
-} & { render(): Render[".md"] };
-"2025-11-01-03.md": {
-	id: "2025-11-01-03.md";
-  slug: "2025-11-01-03";
+"论文被喷.md": {
+	id: "论文被喷.md";
+  slug: "论文被喷";
   body: string;
   collection: "diary";
   data: any
