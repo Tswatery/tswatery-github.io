@@ -84,31 +84,4 @@ function formatDate(date: Date) {
       ))}
     </div>
   </section>
-
-  {/* 其他链接 */}
-  <section class="pt-8 border-t border-border">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <a
-        href={`${basePath}tags`}
-        class="p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
-      >
-        <h3 class="font-semibold mb-2">📂 标签</h3>
-        <p class="text-sm text-muted">按标签浏览文章</p>
-      </a>
-      <a
-        href={`${basePath}archive`}
-        class="p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
-      >
-        <h3 class="font-semibold mb-2">📅 归档</h3>
-        <p class="text-sm text-muted">按时间浏览文章</p>
-      </a>
-      <a
-        href={`${basePath}about`}
-        class="p-4 border border-border rounded-lg hover:shadow-md transition-shadow"
-      >
-        <h3 class="font-semibold mb-2">👤 关于</h3>
-        <p class="text-sm text-muted">了解更多</p>
-      </a>
-    </div>
-  </section>
 </Layout>

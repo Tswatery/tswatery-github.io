@@ -1,0 +1,188 @@
+---
+import Layout from '../../layouts/BaseLayout.astro';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+interface DiaryEntry {
+  date: string;
+  fileDate: string;
+  mood: string;
+  rating: number;
+  weather: string;
+  content: string;
+  tags: string[];
+  fileName: string;
+}
+
+const diaryDir = path.join(process.cwd(), 'src/content/diary');
+
+// 读取所有 Markdown 文件
+const entries: DiaryEntry[] = [];
+
+try {
+  const files = await fs.readdir(diaryDir);
+
+  for (const file of files) {
+    if (file.endsWith('.md')) {
+      const filePath = path.join(diaryDir, file);
+      const content = await fs.readFile(filePath, 'utf-8');
+
+      // 解析 Front Matter
+      let mood = '😊';
+      let rating = 3;
+      let weather = '🌤️';
+      let tags: string[] = [];
+      let markdownContent = content;
+
+      // 检查是否有 Front Matter
+      if (content.startsWith('---')) {
+        const endIndex = content.indexOf('---', 3);
+        if (endIndex !== -1) {
+          const frontMatter = content.slice(3, endIndex).trim();
+          markdownContent = content.slice(endIndex + 3).trim();
+
+          // 解析 Front Matter
+          const moodMatch = frontMatter.match(/mood:\s*(.+)/);
+          if (moodMatch) mood = moodMatch[1].trim();
+
+          const ratingMatch = frontMatter.match(/rating:\s*(\d+)/);
+          if (ratingMatch) rating = parseInt(ratingMatch[1]);
+
+          const weatherMatch = frontMatter.match(/weather:\s*(.+)/);
+          if (weatherMatch) weather = weatherMatch[1].trim();
+
+          const tagsMatch = frontMatter.match(/tags:\s*\[([^\]]*)\]/);
+          if (tagsMatch) {
+            tags = tagsMatch[1]
+              .split(',')
+              .map(t => t.trim().replace(/['"]/g, ''))
+              .filter(t => t);
+          }
+        }
+      }
+
+      // 获取文件修改时间
+      const stats = await fs.stat(filePath);
+      const fileDate = stats.mtime.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+
+      entries.push({
+        date: fileDate,
+        fileDate,
+        mood,
+        rating,
+        weather,
+        content: markdownContent,
+        tags,
+        fileName: file,
+      });
+    }
+  }
+} catch (error) {
+  console.error('读取小记文件失败:', error);
+}
+
+// 按日期排序（最新的在前）
+const sortedEntries = entries.sort((a, b) =>
+  new Date(a.fileDate).getTime() - new Date(b.fileDate).getTime()
+).reverse();
+
+// 按日期分组
+const groupedEntries = sortedEntries.reduce((groups: Record<string, DiaryEntry[]>, entry) => {
+  const dateOnly = entry.fileDate.split(' ')[0]; // 提取日期部分
+  if (!groups[dateOnly]) {
+    groups[dateOnly] = [];
+  }
+  groups[dateOnly].push(entry);
+  return groups;
+}, {});
+
+const pageTitle = '每日小记';
+const pageDescription = '记录生活中的点点滴滴';
+---
+
+<Layout title={pageTitle} description={pageDescription}>
+  <div class="space-y-8">
+    <header class="border-b pb-6">
+      <h1 class="text-4xl font-bold mb-4">{pageTitle}</h1>
+      <p class="text-muted">{pageDescription}</p>
+    </header>
+
+    <!-- 按日期显示小记 -->
+    {Object.entries(groupedEntries).map(([date, entries]) => (
+      <section class="space-y-4">
+        <h2 class="text-2xl font-semibold border-b pb-2">
+          {date}
+          <span class="text-sm text-muted ml-2">
+            ({entries.length} 条小记)
+          </span>
+        </h2>
+
+        <div class="space-y-4">
+          {entries.map((entry) => (
+            <article class="bg-white border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
+              <div class="flex items-start justify-between mb-3">
+                <div class="flex items-center space-x-3 text-sm text-muted">
+                  <div class="flex items-center space-x-1">
+                    <span class="text-lg">{entry.weather}</span>
+                    <span>天气</span>
+                  </div>
+                  <span>•</span>
+                  <div class="flex items-center space-x-1">
+                    <span class="text-lg">{entry.mood}</span>
+                  </div>
+                  <span>•</span>
+                  <div class="flex items-center space-x-1">
+                    {Array.from({ length: entry.rating }).map(() => (
+                      <span class="text-yellow-500">⭐</span>
+                    ))}
+                    <span class="text-xs ml-1">
+                      ({entry.rating === 1 && '极差'}
+                      {entry.rating === 2 && '有点差'}
+                      {entry.rating === 3 && '一般'}
+                      {entry.rating === 4 && '有点好'}
+                      {entry.rating === 5 && '极好'})
+                    </span>
+                  </div>
+                </div>
+                <time class="text-sm text-muted">{entry.fileDate}</time>
+              </div>
+
+              <div class="text-fg mb-3 leading-relaxed">
+                {entry.content.split('\n').map(line => line.trim() ? <p>{line}</p> : <br />)}
+              </div>
+
+              {entry.tags && entry.tags.length > 0 && (
+                <div class="flex flex-wrap gap-2">
+                  {entry.tags.map((tag) => (
+                    <span class="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+    ))}
+
+    {entries.length === 0 && (
+      <div class="text-center py-12">
+        <p class="text-muted text-lg">还没有小记，去添加第一条吧！</p>
+      </div>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .capitalize {
+    text-transform: capitalize;
+  }
+</style>

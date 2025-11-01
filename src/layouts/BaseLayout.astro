@@ -56,10 +56,11 @@ const canonicalURL = new URL(pathname, site);
       <nav class="max-w-a4 mx-auto px-6 py-4">
         <div class="flex justify-between items-center">
           <a href={`${basePath}`} class="text-xl font-bold text-fg hover:text-primary transition-colors">
-            我的博客
+            Linfall
           </a>
           <div class="flex items-center space-x-6">
             <a href={`${basePath}blog`} class="text-fg hover:text-primary transition-colors">文章</a>
+            <a href={`${basePath}diary`} class="text-fg hover:text-primary transition-colors">小记</a>
             <a href={`${basePath}tags`} class="text-fg hover:text-primary transition-colors">标签</a>
             <a href={`${basePath}archive`} class="text-fg hover:text-primary transition-colors">归档</a>
             <a href={`${basePath}about`} class="text-fg hover:text-primary transition-colors">关于</a>
@@ -80,7 +81,7 @@ const canonicalURL = new URL(pathname, site);
     <!-- 页脚 -->
     <footer class="bg-white border-t border-border py-8">
       <div class="max-w-a4 mx-auto px-6 text-center text-muted text-sm">
-        <p>&copy; 2025 我的博客. All rights reserved.</p>
+        <p>&copy; 2025 Linfall. All rights reserved.</p>
         <p class="mt-2">
           Powered by
           <a href="https://astro.build" class="text-link hover:underline" target="_blank" rel="noopener noreferrer">Astro</a> &
