@@ -76,7 +76,7 @@ try {
         }
       }
 
-      // 获取文件修改时间
+      // 获取文件时间（优先使用创建时间）
       const stats = await fs.stat(filePath);
       let displayDate: string;
 
@@ -84,8 +84,9 @@ try {
         // 如果有自定义日期，直接使用
         displayDate = customDate;
       } else {
-        // 否则使用文件修改时间（明确指定 UTC+8 时区）
-        const date = new Date(stats.mtime);
+        // 使用文件创建时间（优先birthtime，回退到ctime）
+        // 注意：mtime会随每次修改而更新，不能使用
+        const originalDate = stats.birthtime || stats.ctime || stats.mtime;
         displayDate = new Intl.DateTimeFormat('zh-CN', {
           timeZone: 'Asia/Shanghai',
           year: 'numeric',
@@ -94,7 +95,7 @@ try {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit',
-        }).format(date);
+        }).format(originalDate);
       }
 
       entries.push({
