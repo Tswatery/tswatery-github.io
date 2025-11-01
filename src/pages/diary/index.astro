@@ -4,6 +4,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 interface DiaryEntry {
+  title: string;
   date: string;
   fileDate: string;
   mood: string;
@@ -12,6 +13,7 @@ interface DiaryEntry {
   content: string;
   tags: string[];
   fileName: string;
+  hasCustomDate: boolean;
 }
 
 const diaryDir = path.join(process.cwd(), 'src/content/diary');
@@ -28,11 +30,14 @@ try {
       const content = await fs.readFile(filePath, 'utf-8');
 
       // 解析 Front Matter
+      let title = '无标题';
+      let customDate = '';
       let mood = '😊';
       let rating = 3;
       let weather = '🌤️';
       let tags: string[] = [];
       let markdownContent = content;
+      let hasCustomDate = false;
 
       // 检查是否有 Front Matter
       if (content.startsWith('---')) {
@@ -42,6 +47,15 @@ try {
           markdownContent = content.slice(endIndex + 3).trim();
 
           // 解析 Front Matter
+          const titleMatch = frontMatter.match(/title:\s*(.+)/);
+          if (titleMatch) title = titleMatch[1].trim().replace(/['"]/g, '');
+
+          const dateMatch = frontMatter.match(/date:\s*(.+)/);
+          if (dateMatch) {
+            customDate = dateMatch[1].trim().replace(/['"]/g, '');
+            hasCustomDate = true;
+          }
+
           const moodMatch = frontMatter.match(/mood:\s*(.+)/);
           if (moodMatch) mood = moodMatch[1].trim();
 
@@ -63,24 +77,36 @@ try {
 
       // 获取文件修改时间
       const stats = await fs.stat(filePath);
-      const fileDate = stats.mtime.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
+      let fileDate: string;
+      let displayDate: string;
+
+      if (hasCustomDate && customDate) {
+        // 如果有自定义日期，直接使用
+        displayDate = customDate;
+      } else {
+        // 否则使用文件修改时间
+        fileDate = stats.mtime.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+        displayDate = fileDate;
+      }
 
       entries.push({
-        date: fileDate,
-        fileDate,
+        title,
+        date: displayDate,
+        fileDate: displayDate,
         mood,
         rating,
         weather,
         content: markdownContent,
         tags,
         fileName: file,
+        hasCustomDate,
       });
     }
   }
@@ -127,6 +153,9 @@ const pageDescription = '记录生活中的点点滴滴';
         <div class="space-y-4">
           {entries.map((entry) => (
             <article class="bg-white border border-border rounded-lg p-6 hover:shadow-md transition-shadow">
+              {/* 小记标题 */}
+              <h3 class="text-xl font-semibold mb-3 text-fg">{entry.title}</h3>
+
               <div class="flex items-start justify-between mb-3">
                 <div class="flex items-center space-x-3 text-sm text-muted">
                   <div class="flex items-center space-x-1">
