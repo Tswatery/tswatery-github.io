@@ -133,6 +133,9 @@ const groupedEntries = sortedEntries.reduce((groups: Record<string, DiaryEntry[]
 
 const pageTitle = '每日小记';
 const pageDescription = '记录生活中的点点滴滴';
+
+// 评分标签映射
+const ratingLabels = ['', '极差', '有点差', '一般', '有点好', '极好'];
 ---
 
 <Layout title={pageTitle} description={pageDescription}>
@@ -174,11 +177,7 @@ const pageDescription = '记录生活中的点点滴滴';
                       <span class="text-yellow-500">⭐</span>
                     ))}
                     <span class="text-xs ml-1">
-                      ({entry.rating === 1 && '极差'}
-                      {entry.rating === 2 && '有点差'}
-                      {entry.rating === 3 && '一般'}
-                      {entry.rating === 4 && '有点好'}
-                      {entry.rating === 5 && '极好'})
+                      ({ratingLabels[entry.rating]})
                     </span>
                   </div>
                 </div>
