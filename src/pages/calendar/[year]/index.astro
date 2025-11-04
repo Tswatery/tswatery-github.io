@@ -1,0 +1,509 @@
+---
+import Layout from '../../../layouts/BaseLayout.astro';
+import type { GetStaticPaths } from 'astro';
+import { getCollection } from 'astro:content';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+export const getStaticPaths: GetStaticPaths = () => {
+  // 生成 2020-2030 年的路径
+  const years = [];
+  for (let year = 2020; year <= 2030; year++) {
+    years.push({
+      params: { year: year.toString() },
+      props: { year },
+    });
+  }
+  return years;
+};
+
+const { year } = Astro.props;
+const basePath = Astro.config?.base || '/';
+
+// 构建“日期 -> 当天内容”映射（文章/小记）
+function ymdKey(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// 博客文章（使用 content collection；若为空则为空映射）
+const blogByDate: Record<string, { title: string; link: string }[]> = {};
+try {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  for (const p of posts) {
+    const key = ymdKey(new Date(p.data.date));
+    if (!blogByDate[key]) blogByDate[key] = [];
+    blogByDate[key].push({ title: p.data.title, link: `${basePath}blog/${p.slug}/` });
+  }
+} catch (e) {
+  // collection 不存在或为空时忽略
+}
+
+// 小记（读取 src/content/diary 下 md/markdown 文件，按日期分组）
+const diaryByDate: Record<string, { title: string; time?: string }[]> = {};
+try {
+  const diaryDir = path.join(process.cwd(), 'src/content/diary');
+  const files = await fs.readdir(diaryDir);
+  for (const file of files) {
+    if (!file.endsWith('.md') && !file.endsWith('.markdown')) continue;
+    const filePath = path.join(diaryDir, file);
+    const content = await fs.readFile(filePath, 'utf-8');
+    let title = path.basename(file, path.extname(file));
+    let customDate = '';
+    let hasCustomDate = false;
+    let markdownContent = content;
+    if (content.startsWith('---')) {
+      const endIndex = content.indexOf('---', 3);
+      if (endIndex !== -1) {
+        const frontMatter = content.slice(3, endIndex).trim();
+        markdownContent = content.slice(endIndex + 3).trim();
+        const titleMatch = frontMatter.match(/title:\s*(.+)/);
+        if (titleMatch) title = titleMatch[1].trim().replace(/['"]/g, '');
+        const dateMatch = frontMatter.match(/date:\s*(.+)/);
+        if (dateMatch) {
+          customDate = dateMatch[1].trim().replace(/['"]/g, '');
+          hasCustomDate = true;
+        }
+      }
+    }
+    const stats = await fs.stat(filePath);
+    let jsDate: Date;
+    if (hasCustomDate && customDate) {
+      // 尝试解析自定义日期
+      jsDate = new Date(customDate.replace(/\./g, '-').replace(/\//g, '-'));
+      if (isNaN(jsDate.getTime())) jsDate = stats.birthtime || stats.ctime || stats.mtime;
+    } else {
+      jsDate = stats.birthtime || stats.ctime || stats.mtime;
+    }
+    const key = ymdKey(jsDate);
+    if (!diaryByDate[key]) diaryByDate[key] = [];
+    // 提取时间部分
+    const time = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(jsDate);
+    diaryByDate[key].push({ title, time });
+  }
+} catch (e) {
+  // 目录不存在则忽略
+}
+
+const calData = { blog: blogByDate, diary: diaryByDate };
+
+// 月份名称
+const monthNames = [
+  '一月', '二月', '三月', '四月', '五月', '六月',
+  '七月', '八月', '九月', '十月', '十一月', '十二月'
+];
+
+// 星期名称
+const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+
+// 获取某个月的天数
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+// 获取某个月第一天是星期几
+function getFirstDayOfMonth(year: number, month: number) {
+  return new Date(year, month, 1).getDay();
+}
+
+// 计算用：今天（零点）
+const today = new Date();
+today.setHours(0,0,0,0);
+
+// 生成12个月的日历数据
+const monthsData = [];
+for (let month = 0; month < 12; month++) {
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = getFirstDayOfMonth(year, month);
+  const days = [];
+
+  // 添加空白格子
+  for (let i = 0; i < firstDay; i++) {
+    days.push(null);
+  }
+
+  // 添加日期
+  for (let i = 1; i <= daysInMonth; i++) {
+    days.push({
+      day: i,
+      isToday: (new Date().getFullYear() === year &&
+                new Date().getMonth() === month &&
+                new Date().getDate() === i),
+      isPast: (new Date(year, month, i).setHours(0,0,0,0) < today.getTime()),
+    });
+  }
+
+  monthsData.push({
+    month,
+    monthName: monthNames[month],
+    days,
+  });
+}
+---
+
+<Layout
+  title={`${year}年日历`}
+  description={`${year}年日历视图，包含农历和节假日信息`}
+>
+  <div class="min-h-screen bg-bg">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <header class="mb-8 text-center">
+        <h1 class="text-4xl font-bold text-fg mb-2">{year}年 日历</h1>
+        <p class="text-muted">点击日期查看详细信息</p>
+      </header>
+
+      {/* 12个月份网格 */}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {monthsData.map((monthData) => (
+          <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            {/* 月份标题 */}
+            <div class="bg-primary text-white text-center py-3">
+              <h2 class="text-xl font-semibold">{monthData.monthName}</h2>
+            </div>
+
+            {/* 星期标题 */}
+            <div class="grid grid-cols-7 gap-1 p-2 bg-gray-50">
+              {weekDays.map(day => (
+                <div class="text-center text-xs font-semibold text-muted py-1">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* 日期格子 */}
+            <div class="grid grid-cols-7 gap-1 p-2">
+              {monthData.days.map((day, index) => (
+                <div
+                  class={`
+                    aspect-square flex flex-col items-center justify-center rounded cursor-pointer
+                    text-xs transition-all duration-200 relative group
+                    ${day === null
+                      ? 'bg-transparent cursor-default'
+                      : day.isToday
+                        ? 'bg-blue-500 text-white font-bold shadow-lg hover:bg-blue-600 hover:scale-110'
+                        : day.isPast
+                          ? 'text-gray-400 hover:scale-110'
+                          : 'hover:bg-gray-100 hover:scale-110'
+                    }
+                  `}
+                  data-g-year={year}
+                  data-g-month={monthData.month + 1}
+                  data-g-day={day?.day}
+                  onclick={day ? `showDayInfo(${year}, ${monthData.month + 1}, ${day.day})` : ''}
+                >
+                  {day && (
+                    <>
+                      <span class="text-sm font-medium">{day.day}</span>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 内联信息面板（点击日期后在此展示） */}
+      <section id="dayInfo" class="mt-8 bg-white border border-border rounded-lg p-4" style="display:none">
+        <h3 id="dayInfoTitle" class="text-lg font-semibold mb-2">请选择一个日期</h3>
+        <div id="dayInfoBody" class="space-y-3 text-sm text-fg"></div>
+      </section>
+
+      {/* 返回链接 */}
+      <div class="mt-12 text-center">
+        <a
+          href={`${basePath}calendar`}
+          class="inline-flex items-center gap-2 text-link hover:underline"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          返回日历首页
+        </a>
+      </div>
+    </div>
+  </div>
+
+  {/* 嵌入当天内容数据（博客/小记） */}
+  <script
+    type="application/json"
+    id="caldata"
+    set:html={JSON.stringify(calData)}
+  ></script>
+
+  {/* 日期详情弹窗（保留但不使用） */}
+  <div id="dateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-semibold text-fg">日期详情</h3>
+        <button
+          onclick="closeDateModal()"
+          class="text-muted hover:text-fg transition-colors"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div id="modalContent" class="space-y-3">
+        <!-- 动态内容 -->
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-border">
+        <p class="text-sm text-muted text-center">
+          数据仅供参考，实际以官方发布为准
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 通过 Intl 中文农历日历获取农历信息
+    function getLunarParts(date) {
+      try {
+        // 使用 dateStyle: 'full' 以获得中文农历“初一/廿九”等格式
+        const fmt = new Intl.DateTimeFormat('zh-CN-u-ca-chinese', { dateStyle: 'full' });
+        const parts = fmt.formatToParts(date);
+        const get = (t) => parts.find(p => p.type === t)?.value || '';
+        return {
+          relatedYear: get('relatedYear'), // 公历年
+          yearName: get('yearName'),       // 天干地支年（如 乙巳）
+          month: get('month'),             // 农历月（如 正月/八月）
+          day: get('day'),                 // 农历日（如 初一/十五）
+          weekday: get('weekday'),
+        };
+      } catch (e) {
+        return { relatedYear: '', yearName: '', month: '', day: '', weekday: '' };
+      }
+    }
+
+    // 常见公历/农历节日映射
+    const SOLAR_HOLIDAYS = {
+      '01-01': '元旦',
+      '05-01': '劳动节',
+      // 国庆节 1-7 号全部
+      '10-01': '国庆节',
+      '10-02': '国庆节',
+      '10-03': '国庆节',
+      '10-04': '国庆节',
+      '10-05': '国庆节',
+      '10-06': '国庆节',
+      '10-07': '国庆节',
+    };
+    const LUNAR_HOLIDAYS = {
+      // 春节范围：腊月二十九至正月初八
+      '腊月廿九': '春节',
+      '腊月三十': '春节',
+      '正月初一': '春节',
+      '正月初二': '春节',
+      '正月初三': '春节',
+      '正月初四': '春节',
+      '正月初五': '春节',
+      '正月初六': '春节',
+      '正月初七': '春节',
+      '正月初八': '春节',
+      // 其它常见节日
+      '正月十五': '元宵节',
+      '五月初五': '端午节',
+      '七月初七': '七夕',
+      '八月十五': '中秋节',
+      '腊月初八': '腊八节',
+    };
+
+    function detectHoliday(gYear, gMonth, gDay, lunarMonthStr, lunarDayStr) {
+      const solarKey = `${String(gMonth).padStart(2,'0')}-${String(gDay).padStart(2,'0')}`;
+      const lunarKey = `${lunarMonthStr}${lunarDayStr}`;
+      return LUNAR_HOLIDAYS[lunarKey] || SOLAR_HOLIDAYS[solarKey] || '';
+    }
+
+    // 在内联面板显示日期信息
+    function showDayInfo(year, month, day) {
+      try {
+        const panel = document.getElementById('dayInfo');
+        const titleEl = document.getElementById('dayInfoTitle');
+        const bodyEl = document.getElementById('dayInfoBody');
+
+      const dateStr = `${year}年${month}月${day}日`;
+      const weekday = new Date(year, month - 1, day).toLocaleDateString('zh-CN', { weekday: 'long' });
+
+      // 计算农历信息
+      const lunar = getLunarParts(new Date(year, month - 1, day));
+      const lunarYearText = lunar.yearName ? `${lunar.yearName}年` : '';
+      const lunarDateText = `${lunar.month || ''}${lunar.day || ''}`;
+      const holiday = detectHoliday(year, month, day, lunar.month, lunar.day);
+
+        const calEl = document.getElementById('caldata');
+        const cal = calEl ? JSON.parse(calEl.textContent || '{}') : {};
+        const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const blogs = (cal.blog && cal.blog[dateKey]) ? cal.blog[dateKey] : [];
+        const diaries = (cal.diary && cal.diary[dateKey]) ? cal.diary[dateKey] : [];
+
+      const blogListHTML = blogs.length
+        ? `<ul class="list-disc pl-5 space-y-1">${blogs.map(b => `<li><a href="${b.link}" class="text-link hover:underline" target="_self">${b.title}</a></li>`).join('')}</ul>`
+        : '<p class="text-sm text-muted">无</p>';
+      const diaryListHTML = diaries.length
+        ? `<ul class="list-disc pl-5 space-y-1">${diaries.map(d => `<li>${d.title}${d.time ? ` <span class=\"text-xs text-muted\">(${d.time})</span>` : ''}</li>`).join('')}</ul>`
+        : '<p class="text-sm text-muted">无</p>';
+
+        titleEl.textContent = `${dateStr}`;
+        bodyEl.innerHTML = `
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-gray-50 p-3 rounded">
+              <p class="text-sm text-muted mb-1">阳历</p>
+              <p class="font-semibold">${year}年${month}月${day}日（${weekday}）</p>
+            </div>
+            <div class="bg-blue-50 p-3 rounded">
+              <p class="text-sm text-muted mb-1">农历</p>
+              <p class="font-semibold">${lunarYearText} ${lunarDateText}</p>
+            </div>
+          </div>
+          ${holiday ? `
+            <div class="bg-red-50 p-3 rounded">
+              <p class="text-sm text-muted mb-1">节日</p>
+              <p class="font-semibold text-red-600">${holiday}</p>
+            </div>
+          ` : ''}
+          <div class="bg-gray-50 p-3 rounded space-y-2">
+            <p class="text-sm text-muted mb-1">当天内容</p>
+            <div>
+              <p class="text-sm font-semibold mb-1">文章（${blogs.length}）</p>
+              ${blogListHTML}
+            </div>
+            <div>
+              <p class="text-sm font-semibold mb-1">小记（${diaries.length}）</p>
+              ${diaryListHTML}
+            </div>
+          </div>
+        `;
+        panel.classList.remove('hidden');
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        // 高亮选中日期
+        document.querySelectorAll('[data-g-year][data-g-month][data-g-day]')
+          .forEach(el => el.classList.remove('ring-2','ring-primary','ring-offset-1'));
+        const sel = document.querySelector(`div[data-g-year="${year}"][data-g-month="${month}"][data-g-day="${day}"]`);
+        if (sel) sel.classList.add('ring-2','ring-primary','ring-offset-1');
+      } catch (err) {
+        console.error('[calendar] showDayInfo error', err);
+      }
+    }
+
+    // 关闭弹窗
+    function closeDateModal() {
+      const modal = document.getElementById('dateModal');
+      modal.classList.add('hidden');
+    }
+
+    // 点击背景关闭弹窗
+    document.getElementById('dateModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeDateModal();
+      }
+    });
+
+    // ESC键关闭弹窗
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        closeDateModal();
+      }
+    });
+
+    // 初始化绑定（在 DOM 就绪后执行，兼容 dev/SPA 导航）
+    function initCalendarBindings() {
+      // 绑定点击（防止重复绑定）
+      document.querySelectorAll('[data-g-year][data-g-month][data-g-day]').forEach((el) => {
+        if (el.getAttribute('data-bound') === '1') return;
+        el.setAttribute('data-bound', '1');
+        el.addEventListener('click', () => {
+          const y = Number(el.getAttribute('data-g-year'));
+          const m = Number(el.getAttribute('data-g-month'));
+          const d = Number(el.getAttribute('data-g-day'));
+          if (y && m && d) showDayInfo(y, m, d);
+        });
+      });
+
+      // 打节日角标（避免重复）
+      document.querySelectorAll('[data-g-year][data-g-month][data-g-day]').forEach((el) => {
+        if (el.getAttribute('data-badged') === '1') return;
+        const y = Number(el.getAttribute('data-g-year'));
+        const m = Number(el.getAttribute('data-g-month'));
+        const d = Number(el.getAttribute('data-g-day'));
+        if (!y || !m || !d) return;
+        const lunar = getLunarParts(new Date(y, m - 1, d));
+        const holiday = detectHoliday(y, m, d, lunar.month, lunar.day);
+        if (holiday) {
+          const badge = document.createElement('span');
+          badge.className = 'absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-red-500';
+          badge.title = holiday;
+          badge.setAttribute('aria-label', holiday);
+          el.appendChild(badge);
+        }
+        el.setAttribute('data-badged', '1');
+      });
+
+      // 事件委托（捕获阶段），更鲁棒
+      if (!window.__calDelegated__) {
+        window.__calDelegated__ = true;
+        document.addEventListener('click', (ev) => {
+          const el = ev.target.closest?.('[data-g-year][data-g-month][data-g-day]');
+          if (!el) return;
+          const y = Number(el.getAttribute('data-g-year'));
+          const m = Number(el.getAttribute('data-g-month'));
+          const d = Number(el.getAttribute('data-g-day'));
+          if (y && m && d) showDayInfo(y, m, d);
+        }, true);
+      }
+    }
+
+    // DOM 就绪后执行绑定
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initCalendarBindings);
+      window.addEventListener('load', initCalendarBindings);
+    } else {
+      // DOM 已经就绪
+      initCalendarBindings();
+    }
+    // Astro 视图过渡事件（如启用）
+    document.addEventListener('astro:page-load', initCalendarBindings);
+    document.addEventListener('astro:after-swap', initCalendarBindings);
+
+    // 初次绑定（防止某些浏览器延迟事件）
+    setTimeout(initCalendarBindings, 0);
+
+    // 暴露全局函数，供内联 onclick 调用
+    // 向下兼容：旧的 inline onclick 仍可能调用 showDateDetail
+    window.showDayInfo = showDayInfo;
+    window.showDateDetail = showDayInfo;
+    window.closeDateModal = closeDateModal;
+  </script>
+
+  <style>
+    /* 弹窗动画 */
+    #dateModal {
+      transition: opacity 0.3s ease;
+    }
+
+    #dateModal.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #dateModal:not(.hidden) {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #dateModal > div {
+      transform: scale(0.95);
+      transition: transform 0.3s ease;
+    }
+
+    #dateModal:not(.hidden) > div {
+      transform: scale(1);
+    }
+  </style>
+</Layout>

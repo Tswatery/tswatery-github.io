@@ -1,0 +1,29 @@
+---
+// 静态重定向到当前年份的年视图，例如 /calendar/2025/
+const basePath = Astro.config?.base || '/';
+const currentYear = new Date().getFullYear();
+const target = `${basePath}calendar/${currentYear}/`;
+---
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content={`0; url=${target}`} />
+    <link rel="canonical" href={target} />
+    <title>正在跳转到 {currentYear} 年日历…</title>
+    <script is:inline>
+      // 使用 canonical 链接获取跳转目标，避免在脚本中内嵌模板表达式
+      const link = document.querySelector('link[rel="canonical"]');
+      if (link && link.href) {
+        window.location.replace(link.href);
+      }
+    </script>
+  </head>
+  <body>
+    <p>
+      正在跳转到 {currentYear} 年日历…
+      如果未自动跳转，<a href={target}>点击这里</a>。
+    </p>
+  </body>
+  </html>

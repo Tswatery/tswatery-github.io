@@ -12,6 +12,7 @@ const { title, description = '', image = '' } = Astro.props;
 
 // 获取基础路径 - 使用 Astro 配置中的 base
 const basePath = Astro.config?.base || '/';
+const currentYear = new Date().getFullYear();
 
 // 安全处理 canonical URL
 const site = Astro.site || new URL('https://example.com');
@@ -61,6 +62,7 @@ const canonicalURL = new URL(pathname, site);
           <div class="flex items-center space-x-6">
             <a href={`${basePath}blog`} class="text-fg hover:text-primary transition-colors">文章</a>
             <a href={`${basePath}diary`} class="text-fg hover:text-primary transition-colors">小记</a>
+            <a href={`${basePath}calendar/${currentYear}`} class="text-fg hover:text-primary transition-colors">日历</a>
             <a href={`${basePath}tags`} class="text-fg hover:text-primary transition-colors">标签</a>
             <a href={`${basePath}archive`} class="text-fg hover:text-primary transition-colors">归档</a>
             <a href={`${basePath}about`} class="text-fg hover:text-primary transition-colors">关于</a>
