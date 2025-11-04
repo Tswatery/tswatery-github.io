@@ -6,15 +6,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 export const getStaticPaths: GetStaticPaths = () => {
-  // 生成 2020-2030 年的路径
-  const years = [];
-  for (let year = 2020; year <= 2030; year++) {
-    years.push({
-      params: { year: year.toString() },
-      props: { year },
-    });
-  }
-  return years;
+  // 只生成当前年份（2025）
+  const year = new Date().getFullYear();
+  return [{
+    params: { year: year.toString() },
+    props: { year },
+  }];
 };
 
 const { year } = Astro.props;
