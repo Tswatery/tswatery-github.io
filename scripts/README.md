@@ -1,4 +1,29 @@
-# 日记时间戳更新脚本
+# 内容脚本总览
+
+## 快速创建 frontmatter
+
+每次需要写 Blog 或 Diary，只需运行：
+
+```bash
+python3 scripts/create_entry.py --type blog   # 或 diary
+```
+
+脚本会：
+
+- 询问标题、摘要（blog）、标签、天气、心情、评分等必要字段
+- 自动生成合规的 frontmatter（blog: `title/date/summary/tags/weather/mood/rating/draft`，diary: `date/title/mood/rating/weather/tags`）
+- 依据标题或时间戳生成文件名，并写入 `src/content/blog|diary`
+- 生成后的文件直接写正文即可，省去手工编辑 frontmatter 的繁琐
+
+常用参数：
+
+```bash
+python3 scripts/create_entry.py --type blog --title "训练随记" --summary "今日调参记录" --tags 工程,调参 --weather ☁️ --mood 😌
+
+python3 scripts/create_entry.py --type diary --title "午后感想" --weather 🌤️ --mood 😊 --rating 4
+```
+
+## 日记时间戳更新脚本
 
 ## 使用方法
 

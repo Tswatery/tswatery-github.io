@@ -1,0 +1,114 @@
+---
+interface Props {
+  weather?: string;
+  mood?: string;
+  rating?: number;
+  class?: string;
+}
+
+const { weather, mood, rating, class: className } = Astro.props as Props;
+
+const emojiRegex = /[\u2600-\u27BF\u{1F300}-\u{1FAFF}]/u;
+const weatherEmojiMap: Record<string, string> = {
+  晴: '☀️',
+  晴天: '☀️',
+  多云: '⛅',
+  阴: '☁️',
+  阴天: '☁️',
+  雨: '🌧️',
+  下雨: '🌧️',
+  雷: '⛈️',
+  雷雨: '⛈️',
+  雪: '❄️',
+  下雪: '❄️',
+  风: '🌬️',
+  雾: '🌫️',
+  霾: '🌁',
+};
+
+const moodEmojiMap: Record<string, string> = {
+  开心: '😊',
+  高兴: '😊',
+  快乐: '😊',
+  舒服: '😌',
+  放松: '😌',
+  期待: '🤩',
+  专注: '🎯',
+  认真: '🧐',
+  激动: '🤗',
+  兴奋: '🤩',
+  紧张: '😰',
+  焦虑: '😟',
+  疲惫: '😴',
+  生气: '😠',
+  难过: '😢',
+  低落: '🙁',
+  沮丧: '😞',
+};
+
+function normalizeEmoji(value: string | undefined, replacements: Record<string, string>) {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (emojiRegex.test(trimmed)) return trimmed;
+  for (const key in replacements) {
+    if (trimmed.includes(key)) {
+      return replacements[key];
+    }
+  }
+  return trimmed;
+}
+
+const displayWeather = normalizeEmoji(weather, weatherEmojiMap);
+const displayMood = normalizeEmoji(mood, moodEmojiMap);
+
+const hasWeather = Boolean(displayWeather);
+const hasMood = Boolean(displayMood);
+const normalizedRating = typeof rating === 'number' ? Math.round(rating) : undefined;
+const safeRating = typeof normalizedRating === 'number' && normalizedRating > 0
+  ? Math.min(5, Math.max(1, normalizedRating))
+  : undefined;
+const hasRating = typeof safeRating === 'number';
+const ratingLabels = ['', '极差', '有点差', '一般', '有点好', '极好'];
+const stars = hasRating && safeRating ? Array.from({ length: safeRating }) : [];
+const ratingLabel = hasRating && safeRating ? ratingLabels[safeRating] || '一般' : undefined;
+const containerClasses = `flex flex-wrap items-center gap-2 text-sm text-muted ${className ?? ''}`;
+---
+
+{(hasWeather || hasMood || hasRating) && (
+  <div class={containerClasses}>
+    {hasWeather && (
+      <div class="flex items-center gap-1">
+        <span class="text-lg">{displayWeather}</span>
+        <span>天气</span>
+      </div>
+    )}
+
+    {hasWeather && (hasMood || hasRating) && (
+      <span class="text-sm text-muted">•</span>
+    )}
+
+    {hasMood && (
+      <div class="flex items-center gap-1">
+        <span class="text-lg">{displayMood}</span>
+      </div>
+    )}
+
+    {hasMood && hasRating && (
+      <span class="text-sm text-muted">•</span>
+    )}
+
+    {hasRating && safeRating && (
+      <div class="flex items-center gap-1">
+        {stars.map(() => (
+          <span class="text-yellow-500">⭐</span>
+        ))}
+        {ratingLabel && (
+          <span class="text-xs ml-1">
+            ({ratingLabel})
+          </span>
+        )}
+      </div>
+    )}
+  </div>
+)}

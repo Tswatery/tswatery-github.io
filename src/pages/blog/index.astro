@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
+import PostMetaLine from '../../components/PostMetaLine.astro';
 
 // 获取基础路径
 const basePath = Astro.config?.base || '/';
@@ -25,6 +26,8 @@ function formatDate(date: Date) {
     day: 'numeric',
   });
 }
+
+// 评分标签、星级展示逻辑已在 PostMetaLine 组件中复用
 ---
 
 <Layout
@@ -52,6 +55,14 @@ function formatDate(date: Date) {
               {post.data.title}
             </a>
           </h2>
+
+          <PostMetaLine
+            weather={post.data.weather}
+            mood={post.data.mood}
+            rating={post.data.rating}
+            class="mb-2"
+          />
+
           <div class="flex items-center gap-4 text-sm text-muted mb-3">
             <time datetime={post.data.date.toISOString()}>
               {formatDate(post.data.date)}

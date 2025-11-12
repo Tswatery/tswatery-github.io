@@ -6,6 +6,9 @@ const blog = defineCollection({
     date: z.date(),
     summary: z.string(),
     tags: z.array(z.string()),
+    weather: z.string().optional(),
+    mood: z.string().optional(),
+    rating: z.number().int().min(1).max(5).optional(),
     updated: z.date().optional(),
     draft: z.boolean().default(false),
     cover: z.object({
