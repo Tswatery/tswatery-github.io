@@ -151,15 +151,30 @@ declare module 'astro:content' {
 	>;
 
 	type ContentEntryMap = {
-		"blog": Record<string, {
-  id: string;
-  slug: string;
+		"blog": {
+"training-summary.md": {
+	id: "training-summary.md";
+  slug: "training-summary";
   body: string;
   collection: "blog";
-  data: InferEntrySchema<"blog">;
-  render(): Render[".md"];
-}>;
+  data: InferEntrySchema<"blog">
+} & { render(): Render[".md"] };
+"transformer.md": {
+	id: "transformer.md";
+  slug: "transformer";
+  body: string;
+  collection: "blog";
+  data: InferEntrySchema<"blog">
+} & { render(): Render[".md"] };
+};
 "diary": {
+"Verl代码阅读：PPO与GRPO的差异.md": {
+	id: "Verl代码阅读：PPO与GRPO的差异.md";
+  slug: "verl代码阅读ppo与grpo的差异";
+  body: string;
+  collection: "diary";
+  data: any
+} & { render(): Render[".md"] };
 "论文被喷.md": {
 	id: "论文被喷.md";
   slug: "论文被喷";

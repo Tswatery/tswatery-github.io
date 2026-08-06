@@ -6,14 +6,17 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 export const getStaticPaths: GetStaticPaths = () => {
-  // 只生成当前年份（2025）
-  const year = new Date().getFullYear();
-  return [{
+  // 静态站点预生成一段常用年份，以支持前后切换。
+  const firstYear = 2020;
+  const lastYear = 2035;
+  return Array.from({ length: lastYear - firstYear + 1 }, (_, index) => firstYear + index).map((year) => ({
     params: { year: year.toString() },
     props: { year },
-  }];
+  }));
 };
 
+const FIRST_YEAR = 2020;
+const LAST_YEAR = 2035;
 const { year } = Astro.props;
 const basePath = Astro.config?.base || '/';
 
@@ -105,10 +108,6 @@ function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
-// 计算用：今天（零点）
-const today = new Date();
-today.setHours(0,0,0,0);
-
 // 生成12个月的日历数据
 const monthsData = [];
 for (let month = 0; month < 12; month++) {
@@ -125,10 +124,6 @@ for (let month = 0; month < 12; month++) {
   for (let i = 1; i <= daysInMonth; i++) {
     days.push({
       day: i,
-      isToday: (new Date().getFullYear() === year &&
-                new Date().getMonth() === month &&
-                new Date().getDate() === i),
-      isPast: (new Date(year, month, i).setHours(0,0,0,0) < today.getTime()),
     });
   }
 
@@ -147,7 +142,29 @@ for (let month = 0; month < 12; month++) {
   <div class="min-h-screen bg-bg">
     <div class="max-w-7xl mx-auto px-6 py-8">
       <header class="mb-8 text-center">
-        <h1 class="text-4xl font-bold text-fg mb-2">{year}年 日历</h1>
+        <div class="flex items-center justify-center gap-6 mb-2">
+          {year > FIRST_YEAR ? (
+            <a
+              href={`${basePath}calendar/${year - 1}/`}
+              class="year-switch"
+              aria-label={`查看${year - 1}年日历`}
+              title={`${year - 1}年`}
+            >
+              ←
+            </a>
+          ) : <span class="year-switch-placeholder" aria-hidden="true"></span>}
+          <h1 class="text-4xl font-bold text-fg">{year}年 日历</h1>
+          {year < LAST_YEAR ? (
+            <a
+              href={`${basePath}calendar/${year + 1}/`}
+              class="year-switch"
+              aria-label={`查看${year + 1}年日历`}
+              title={`${year + 1}年`}
+            >
+              →
+            </a>
+          ) : <span class="year-switch-placeholder" aria-hidden="true"></span>}
+        </div>
         <p class="text-muted">点击日期查看详细信息</p>
       </header>
 
@@ -178,17 +195,12 @@ for (let month = 0; month < 12; month++) {
                     text-xs transition-all duration-200 relative group
                     ${day === null
                       ? 'bg-transparent cursor-default'
-                      : day.isToday
-                        ? 'bg-blue-500 text-white font-bold shadow-lg hover:bg-blue-600 hover:scale-110'
-                        : day.isPast
-                          ? 'text-gray-400 hover:scale-110'
-                          : 'hover:bg-gray-100 hover:scale-110'
+                      : 'calendar-day hover:scale-110'
                     }
                   `}
                   data-g-year={year}
                   data-g-month={monthData.month + 1}
                   data-g-day={day?.day}
-                  onclick={day ? `showDayInfo(${year}, ${monthData.month + 1}, ${day.day})` : ''}
                 >
                   {day && (
                     <>
@@ -411,14 +423,23 @@ for (let month = 0; month < 12; month++) {
 
     // 初始化绑定（在 DOM 就绪后执行，兼容 dev/SPA 导航）
     function initCalendarBindings() {
+      // “今天”和过去日期必须以访客打开页面的时间为准，不能在部署时固化。
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       // 绑定点击（防止重复绑定）
       document.querySelectorAll('[data-g-year][data-g-month][data-g-day]').forEach((el) => {
+        const y = Number(el.getAttribute('data-g-year'));
+        const m = Number(el.getAttribute('data-g-month'));
+        const d = Number(el.getAttribute('data-g-day'));
+        const cellDate = new Date(y, m - 1, d);
+        cellDate.setHours(0, 0, 0, 0);
+        el.classList.toggle('is-today', cellDate.getTime() === today.getTime());
+        el.classList.toggle('is-past', cellDate.getTime() < today.getTime());
+
         if (el.getAttribute('data-bound') === '1') return;
         el.setAttribute('data-bound', '1');
         el.addEventListener('click', () => {
-          const y = Number(el.getAttribute('data-g-year'));
-          const m = Number(el.getAttribute('data-g-month'));
-          const d = Number(el.getAttribute('data-g-day'));
           if (y && m && d) showDayInfo(y, m, d);
         });
       });
@@ -442,18 +463,6 @@ for (let month = 0; month < 12; month++) {
         el.setAttribute('data-badged', '1');
       });
 
-      // 事件委托（捕获阶段），更鲁棒
-      if (!window.__calDelegated__) {
-        window.__calDelegated__ = true;
-        document.addEventListener('click', (ev) => {
-          const el = ev.target.closest?.('[data-g-year][data-g-month][data-g-day]');
-          if (!el) return;
-          const y = Number(el.getAttribute('data-g-year'));
-          const m = Number(el.getAttribute('data-g-month'));
-          const d = Number(el.getAttribute('data-g-day'));
-          if (y && m && d) showDayInfo(y, m, d);
-        }, true);
-      }
     }
 
     // DOM 就绪后执行绑定
@@ -479,6 +488,49 @@ for (let month = 0; month < 12; month++) {
   </script>
 
   <style>
+    .year-switch {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 1px solid rgb(229 231 235);
+      border-radius: 9999px;
+      color: rgb(75 85 99);
+      font-size: 1.5rem;
+      transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .year-switch-placeholder {
+      width: 2.5rem;
+      height: 2.5rem;
+    }
+
+    .year-switch:hover {
+      color: rgb(37 99 235);
+      border-color: rgb(59 130 246);
+      background-color: rgb(239 246 255);
+    }
+
+    .calendar-day:hover {
+      background-color: rgb(243 244 246);
+    }
+
+    .calendar-day.is-past {
+      color: rgb(156 163 175);
+    }
+
+    .calendar-day.is-today {
+      color: white;
+      background-color: rgb(59 130 246);
+      font-weight: 700;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+
+    .calendar-day.is-today:hover {
+      background-color: rgb(37 99 235);
+    }
+
     /* 弹窗动画 */
     #dateModal {
       transition: opacity 0.3s ease;

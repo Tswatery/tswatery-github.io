@@ -1,3 +1,10 @@
+---
+title: "Transformer相关问题总结"
+date: 2026-08-06
+summary: "Transformer架构、注意力机制与KV Cache相关问题总结"
+tags: ["Transformer", "深度学习"]
+---
+
 ## 1 Transformer的整体架构是什么？和RNN、CNN的核心差异在哪？
 
 原始的Transformer是Encoder-Decoder的seq2seq架构，在Encoder阶段采用双向self-attention产生上下文关系信息，Decoder阶段用因果Attention自回归生成答案，并通过cross attention读取Encoder计算过的上下文关系信息。其关键组件有Embedding层以及位置编码、多头注意力层、FFN的非线性变换，每个子层的Attention与FFN之间会有Add和Norm层保证深层可训练。
